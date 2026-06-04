@@ -1,10 +1,16 @@
 provider "aws" {
-  region = "ap-northeast-1"
+  region = var.aws_region
 }
 
 # 1. Main S3 Bucket
 resource "aws_s3_bucket" "my_test_bucket" {
-  bucket = "inshunshous-project-2026-v1" 
+  bucket = var.bucket_name
+
+  tags = {
+    Environment = "Dev"
+    Project     = "Static-Website"
+    ManagedBy   = "Terraform"
+  }
 }
 
 # 2. Website & File Configuration
@@ -45,7 +51,7 @@ resource "aws_s3_bucket_policy" "allow_public_access" {
   depends_on = [aws_s3_bucket_public_access_block.public_access]
 }
 
-# 4. Advanced Infrastructure Settings (Versioning, Encryption, Lifecycle)
+# 4. Advanced Data Management (Versioning, Encryption, Lifecycle)
 resource "aws_s3_bucket_versioning" "v1" {
   bucket = aws_s3_bucket.my_test_bucket.id
   versioning_configuration {
@@ -65,53 +71,11 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "e1" {
 resource "aws_s3_bucket_lifecycle_configuration" "l1" {
   bucket = aws_s3_bucket.my_test_bucket.id
   rule {
-    id     = "archive"
+    id     = "archive-old-versions"
     status = "Enabled"
     transition {
       days          = 30
       storage_class = "GLACIER"
     }
-  }
-}
-
-# 5. Output
-output "website_url" {
-  value = "http://${aws_s3_bucket.my_test_bucket.bucket}.s3-website-ap-northeast-1.amazonaws.com"
-}
-# Create a custom VPC (Your private network)
-resource "aws_vpc" "app_vpc" {
-  cidr_block           = "10.0.0.0/16"
-  enable_dns_hostnames = true
-
-  tags = {
-    Name = "asiaquest-practice-vpc"
-  }
-}
-# --- Networking ---
-
-resource "aws_vpc" "vpc_main" {
-  cidr_block           = "10.0.0.0/16"
-  enable_dns_hostnames = true
-
-  tags = {
-    Name = "chunsing-dev-vpc"
-  }
-}
-
-resource "aws_subnet" "public_1" {
-  vpc_id                  = aws_vpc.vpc_main.id
-  cidr_block              = "10.0.1.0/24"
-  map_public_ip_on_launch = true
-
-  tags = {
-    Name = "public-subnet-1"
-  }
-}
-
-resource "aws_internet_gateway" "igw" {
-  vpc_id = aws_vpc.vpc_main.id
-
-  tags = {
-    Name = "main-igw"
   }
 }
